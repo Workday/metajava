@@ -7,9 +7,6 @@
 
 package com.workday.meta;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
-
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.type.DeclaredType;
@@ -19,6 +16,8 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -67,8 +66,9 @@ public class MetaTypes {
         longType = getDeclaredType(Long.class);
         shortType = getDeclaredType(Short.class);
 
-        boxedTypes = Sets.newHashSet(booleanType, byteType, characterType, doubleType, floatType, integerType, longType,
-                                     shortType);
+        boxedTypes = new HashSet<>();
+        Collections.addAll(boxedTypes, booleanType, byteType, characterType, doubleType, floatType, integerType,
+                           longType, shortType);
     }
 
     private DeclaredType getDeclaredType(Class<?> clazz) {
@@ -121,8 +121,11 @@ public class MetaTypes {
 
     public TypeMirror getTypeArg(DeclaredType element) {
         List<? extends TypeMirror> typeArguments = element.getTypeArguments();
-        Preconditions.checkArgument(typeArguments.size() == 1, "%s must have exactly one type argument, but found %d",
-                                    element, typeArguments.size());
+        if (typeArguments.size() != 1) {
+            throw new IllegalArgumentException(
+                    String.format(Locale.US, "%s must have exactly one type argument, but found %d", element,
+                                  typeArguments.size()));
+        }
         return typeArguments.get(0);
     }
 

@@ -7,7 +7,6 @@
 
 package com.workday.meta;
 
-import com.google.common.collect.Sets;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -17,7 +16,10 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.util.Elements;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -48,7 +50,9 @@ public class PackageTreeTest {
         when(elementUtils.getPackageOf(orgElement)).thenReturn(orgPackageElement);
         when(elementUtils.getPackageOf(comElement)).thenReturn(comPackageElement);
 
-        PackageTree tree = new PackageTree(elementUtils, Sets.newHashSet(orgPackageElement));
+        Set<PackageElement> packageElements = new HashSet<>();
+        packageElements.add(orgPackageElement);
+        PackageTree tree = new PackageTree(elementUtils, packageElements);
         assertPackageEquals(orgPackageElement, tree.getMatchingPackage(orgElement));
         assertNull(tree.getMatchingPackage(comElement));
         assertNull(tree.getMatchingPackage(packagelessElement));
@@ -129,9 +133,10 @@ public class PackageTreeTest {
         when(elementUtils.getPackageOf(comElement)).thenReturn(comPackageElement);
 
         // Create tree
-        PackageTree tree = new PackageTree(elementUtils, Sets.newHashSet(orgPackageElement, child1PackageElement,
-                                                                         greatGrandchildPackageElement,
-                                                                         child2PackageElement, comPackageElement));
+        Set<PackageElement> packageElements = new HashSet<>();
+        Collections.addAll(packageElements, orgPackageElement, child1PackageElement, greatGrandchildPackageElement,
+                           child2PackageElement, comPackageElement);
+        PackageTree tree = new PackageTree(elementUtils, packageElements);
 
         // Assertions
         assertNull(tree.getMatchingPackage(packagelessElement));
