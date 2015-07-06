@@ -1,3 +1,7 @@
+plugins {
+    id "com.jfrog.bintray" version "1.2"
+}
+
 apply plugin: 'java'
 apply plugin: 'maven-publish'
 
@@ -15,12 +19,30 @@ dependencies {
 
 publishing {
     publications {
-        mavenJava(MavenPublication) {
+        MavenJava(MavenPublication) {
             from components.java
 
             groupId = GROUP_ID
             artifactId = ARTIFACT_ID
             version = VERSION
         }
+    }
+}
+
+final bintrayUser = hasProperty('BINTRAY_USER') ? BINTRAY_USER : ""
+final bintrayKey = hasProperty('BINTRAY_API_KEY') ? BINTRAY_API_KEY : ""
+
+bintray {
+    user = bintrayUser
+    key = bintrayKey
+
+    publications = ['MavenJava']
+    dryRun = false
+    publish = false
+    pkg {
+        repo = 'workday-oss'
+        name = ARTIFACT_ID
+        userOrg = 'workday'
+        version.name = VERSION
     }
 }
