@@ -47,5 +47,6 @@ bintray {
         name = ARTIFACT_ID
         userOrg = 'workday'
         version.name = VERSION
+        version.gpg.sign = true
     }
 }
