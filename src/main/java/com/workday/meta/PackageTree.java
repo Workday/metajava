@@ -39,11 +39,10 @@ public class PackageTree {
     /**
      * Find the most specific package from the set this instance was initialized with (see {@link #PackageTree(Elements,
      * Set)}), which the given element is under.
-     * <p/>
+     * <p>
      * Consider the set of packages {{@code "com.workday", "com.workday.model", "com.workday.model.xml.base"} }. The
      * following table illustrates the behavior of this method.
-     * <pre>
-     * <table border="1">
+     * <table border="1" summary="">
      *     <tr>
      *         <th>Element</th>
      *         <th>Return Value</th>
@@ -61,7 +60,6 @@ public class PackageTree {
      *         <td>{@code null}</td>
      *     </tr>
      * </table>
-     * </pre>
      *
      * @param element The element whose matching package we are trying to find.
      *
@@ -80,7 +78,7 @@ public class PackageTree {
     /**
      * Returns the package tree of a package element as a list. For instance, if the element is {@code
      * com.workday.model}, then this method returns {@code ["com", "workday", "model"]}.
-     * <p/>
+     * <p>
      * This method always returns at a list of at least size 1 -- the list containing the element.
      */
     private static List<PackageElement> getPackageHierarchy(PackageElement element) {
@@ -96,7 +94,7 @@ public class PackageTree {
     /**
      * Find the node deepest in the tree that corresponds to one of the original packages and matches the provided
      * package hierarchy, or null if no match is found.
-     * <p/>
+     * <p>
      * Note that this will only return nodes that have a matching package element from the original set, even if there
      * is a deeper node match without a matching package element.
      */
