@@ -6,12 +6,10 @@ You can use metajava in your project by adding the following lines to you `build
 
 ```
 repositories {
-    maven {
-        url  "http://dl.bintray.com/workday/workday-oss"
-    }
+    mavenCentral()
 }
 
 dependencies {
-    compile 'com.workday:metajava:0.9'
+    compile 'com.workday:metajava:1.0'
 }
 ```
