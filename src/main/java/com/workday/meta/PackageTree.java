@@ -7,15 +7,15 @@
 
 package com.workday.meta;
 
-import javax.lang.model.element.Element;
-import javax.lang.model.element.PackageElement;
-import javax.lang.model.util.Elements;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.PackageElement;
+import javax.lang.model.util.Elements;
 
 /**
  * Represents a hierarchy of a set of packages, the main purpose of which is to find the most specific package of the
@@ -39,7 +39,7 @@ public class PackageTree {
     /**
      * Find the most specific package from the set this instance was initialized with (see {@link #PackageTree(Elements,
      * Set)}), which the given element is under.
-     * <p>
+     * <p/>
      * Consider the set of packages {{@code "com.workday", "com.workday.model", "com.workday.model.xml.base"} }. The
      * following table illustrates the behavior of this method.
      * <table border="1" summary="">
@@ -67,47 +67,45 @@ public class PackageTree {
      */
     public PackageElement getMatchingPackage(Element element) {
         Node node = findDeepestMatchingNode(getPackageHierarchy(elementUtils.getPackageOf(element)));
-        return node == null ? null : node.packageElement;
+        return node == null ? null : elementUtils.getPackageElement(node.canonicalName);
     }
 
     private void addPackageToTree(PackageElement element) {
-        List<PackageElement> hierarchy = getPackageHierarchy(element);
+        List<String> hierarchy = getPackageHierarchy(element);
         addPackageToNode(hierarchy, rootNode);
     }
 
     /**
      * Returns the package tree of a package element as a list. For instance, if the element is {@code
      * com.workday.model}, then this method returns {@code ["com", "workday", "model"]}.
-     * <p>
-     * This method always returns at a list of at least size 1 -- the list containing the element.
+     * <p/>
+     * This method will return an empty list if {@param element} is null.
      */
-    private static List<PackageElement> getPackageHierarchy(PackageElement element) {
-        LinkedList<PackageElement> hierarchy = new LinkedList<>();
-        Element nextElement = element;
-        while (nextElement instanceof PackageElement) {
-            hierarchy.push((PackageElement) nextElement);
-            nextElement = nextElement.getEnclosingElement();
+    private static List<String> getPackageHierarchy(PackageElement element) {
+        if (element == null) {
+            return Collections.emptyList();
         }
+        List<String> hierarchy = Arrays.asList(element.getQualifiedName().toString().split("\\."));
         return Collections.unmodifiableList(hierarchy);
     }
 
     /**
      * Find the node deepest in the tree that corresponds to one of the original packages and matches the provided
      * package hierarchy, or null if no match is found.
-     * <p>
+     * <p/>
      * Note that this will only return nodes that have a matching package element from the original set, even if there
      * is a deeper node match without a matching package element.
      */
-    private Node findDeepestMatchingNode(List<PackageElement> hierarchy) {
+    private Node findDeepestMatchingNode(List<String> hierarchy) {
         Node nextNode = rootNode;
         Node lastMatch = null;
         while (!hierarchy.isEmpty()) {
-            String nextName = hierarchy.get(0).getSimpleName().toString();
+            String nextName = hierarchy.get(0);
             nextNode = nextNode.children.get(nextName);
             if (nextNode == null) {
                 break;
             }
-            if (nextNode.packageElement != null) {
+            if (nextNode.isValid) {
                 lastMatch = nextNode;
             }
             hierarchy = hierarchy.subList(1, hierarchy.size());
@@ -124,36 +122,34 @@ public class PackageTree {
      * rootNode}.
      * @param rootNode The Node to start after.
      */
-    private void addPackageToNode(List<PackageElement> hierarchy, Node rootNode) {
+    private void addPackageToNode(List<String> hierarchy, Node rootNode) {
         if (hierarchy.isEmpty()) {
             return;
         }
 
-        PackageElement root = hierarchy.get(0);
-        String rootName = root.getSimpleName().toString();
-        Node parentNode = rootNode.children.get(rootName);
+        String root = hierarchy.get(0);
+        Node parentNode = rootNode.children.get(root);
         if (parentNode == null) {
-            parentNode = createNodeForPackage(hierarchy);
+            parentNode = createNodeForPackage(hierarchy, rootNode.canonicalName);
             rootNode.children.put(parentNode.packagePoint, parentNode);
         } else if (hierarchy.size() == 1) {
-            parentNode.packageElement = root;
+            parentNode.isValid = true;
         } else {
             addPackageToNode(hierarchy.subList(1, hierarchy.size()), parentNode);
         }
     }
 
     /**
-     * Recursively creates Nodes for the given package hierarchy. Only the leaf Node will be created with a
-     * PackageElement.
+     * Recursively creates Nodes for the given package hierarchy. Only the leaf Node will marked as valid.
      */
-    private Node createNodeForPackage(List<PackageElement> packageHierarchy) {
+    private Node createNodeForPackage(List<String> packageHierarchy, String parentPackage) {
         if (packageHierarchy.size() == 1) {
-            PackageElement leaf = packageHierarchy.get(0);
-            return new Node(leaf.getSimpleName().toString(), leaf);
+            String leaf = packageHierarchy.get(0);
+            return new Node(leaf, parentPackage, true);
         } else {
-            PackageElement rootPackage = packageHierarchy.get(0);
-            Node root = new Node(rootPackage.getSimpleName().toString(), null);
-            Node child = createNodeForPackage(packageHierarchy.subList(1, packageHierarchy.size()));
+            String rootPackage = packageHierarchy.get(0);
+            Node root = new Node(rootPackage, parentPackage);
+            Node child = createNodeForPackage(packageHierarchy.subList(1, packageHierarchy.size()), root.canonicalName);
             root.children.put(child.packagePoint, child);
             return root;
         }
@@ -163,13 +159,30 @@ public class PackageTree {
 
         /** The simple name of the package this Node represents. */
         public final String packagePoint;
-        /** The corresponding PackageElement from the original set, or null if there is not matching package. */
-        public PackageElement packageElement;
+        public final String canonicalName;
+        public boolean isValid = false;
         public Map<String, Node> children = new HashMap<>();
 
-        public Node(String packagePoint, PackageElement packageElement) {
+        public Node(String packagePoint, String parentPackage) {
+            this(packagePoint, parentPackage, false);
+        }
+
+        public Node(String packagePoint, String parentPackage, boolean isValid) {
+            this.isValid = isValid;
             this.packagePoint = packagePoint;
-            this.packageElement = packageElement;
+            canonicalName = getCanonicalName(parentPackage);
+        }
+
+        private String getCanonicalName(String parentPackage) {
+            final String canonicalName;
+            if (parentPackage != null && packagePoint != null) {
+                canonicalName = parentPackage + "." + packagePoint;
+            } else if (packagePoint != null) {
+                canonicalName = packagePoint;
+            } else {
+                canonicalName = null;
+            }
+            return canonicalName;
         }
     }
 }
