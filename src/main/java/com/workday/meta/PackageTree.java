@@ -7,15 +7,15 @@
 
 package com.workday.meta;
 
-import javax.lang.model.element.Element;
-import javax.lang.model.element.PackageElement;
-import javax.lang.model.util.Elements;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.PackageElement;
+import javax.lang.model.util.Elements;
 
 /**
  * Represents a hierarchy of a set of packages, the main purpose of which is to find the most specific package of the
@@ -36,6 +36,7 @@ public class PackageTree {
         }
     }
 
+    //@formatter:off
     /**
      * Find the most specific package from the set this instance was initialized with (see {@link #PackageTree(Elements,
      * Set)}), which the given element is under.
@@ -65,13 +66,14 @@ public class PackageTree {
      *
      * @return The most specific matching package for the element, or null if there is not matching package.
      */
+    //@formatter:on
     public PackageElement getMatchingPackage(Element element) {
         Node node = findDeepestMatchingNode(getPackageHierarchy(elementUtils.getPackageOf(element)));
-        return node == null ? null : node.packageElement;
+        return node == null ? null : elementUtils.getPackageElement(node.canonicalName);
     }
 
     private void addPackageToTree(PackageElement element) {
-        List<PackageElement> hierarchy = getPackageHierarchy(element);
+        List<String> hierarchy = getPackageHierarchy(element);
         addPackageToNode(hierarchy, rootNode);
     }
 
@@ -79,15 +81,13 @@ public class PackageTree {
      * Returns the package tree of a package element as a list. For instance, if the element is {@code
      * com.workday.model}, then this method returns {@code ["com", "workday", "model"]}.
      * <p>
-     * This method always returns at a list of at least size 1 -- the list containing the element.
+     * This method will return an empty list if {@param element} is null.
      */
-    private static List<PackageElement> getPackageHierarchy(PackageElement element) {
-        LinkedList<PackageElement> hierarchy = new LinkedList<>();
-        Element nextElement = element;
-        while (nextElement instanceof PackageElement) {
-            hierarchy.push((PackageElement) nextElement);
-            nextElement = nextElement.getEnclosingElement();
+    private static List<String> getPackageHierarchy(PackageElement element) {
+        if (element == null) {
+            return Collections.emptyList();
         }
+        List<String> hierarchy = Arrays.asList(element.getQualifiedName().toString().split("\\."));
         return Collections.unmodifiableList(hierarchy);
     }
 
@@ -98,16 +98,16 @@ public class PackageTree {
      * Note that this will only return nodes that have a matching package element from the original set, even if there
      * is a deeper node match without a matching package element.
      */
-    private Node findDeepestMatchingNode(List<PackageElement> hierarchy) {
+    private Node findDeepestMatchingNode(List<String> hierarchy) {
         Node nextNode = rootNode;
         Node lastMatch = null;
         while (!hierarchy.isEmpty()) {
-            String nextName = hierarchy.get(0).getSimpleName().toString();
-            nextNode = nextNode.children.get(nextName);
+            String nextTerminalName = hierarchy.get(0);
+            nextNode = nextNode.children.get(nextTerminalName);
             if (nextNode == null) {
                 break;
             }
-            if (nextNode.packageElement != null) {
+            if (nextNode.isMatchable) {
                 lastMatch = nextNode;
             }
             hierarchy = hierarchy.subList(1, hierarchy.size());
@@ -122,54 +122,78 @@ public class PackageTree {
      *
      * @param hierarchy The package hierarchy indicating the new Node(s) to insert / update, starting after {@code
      * rootNode}.
-     * @param rootNode The Node to start after.
+     * @param parentNode The Node to start after.
      */
-    private void addPackageToNode(List<PackageElement> hierarchy, Node rootNode) {
+    private void addPackageToNode(List<String> hierarchy, Node parentNode) {
         if (hierarchy.isEmpty()) {
             return;
         }
 
-        PackageElement root = hierarchy.get(0);
-        String rootName = root.getSimpleName().toString();
-        Node parentNode = rootNode.children.get(rootName);
-        if (parentNode == null) {
-            parentNode = createNodeForPackage(hierarchy);
-            rootNode.children.put(parentNode.packagePoint, parentNode);
+        String nextTerminalName = hierarchy.get(0);
+        Node nextNode = parentNode.children.get(nextTerminalName);
+        if (nextNode == null) {
+            nextNode = createNodeForPackage(hierarchy, parentNode.canonicalName);
+            parentNode.children.put(nextNode.terminalName, nextNode);
         } else if (hierarchy.size() == 1) {
-            parentNode.packageElement = root;
+            nextNode.isMatchable = true;
         } else {
-            addPackageToNode(hierarchy.subList(1, hierarchy.size()), parentNode);
+            addPackageToNode(hierarchy.subList(1, hierarchy.size()), nextNode);
         }
     }
 
     /**
-     * Recursively creates Nodes for the given package hierarchy. Only the leaf Node will be created with a
-     * PackageElement.
+     * Recursively creates Nodes for the given package hierarchy. Only the leaf Node will marked as matchable.
      */
-    private Node createNodeForPackage(List<PackageElement> packageHierarchy) {
+    private Node createNodeForPackage(List<String> packageHierarchy, String parentPackage) {
         if (packageHierarchy.size() == 1) {
-            PackageElement leaf = packageHierarchy.get(0);
-            return new Node(leaf.getSimpleName().toString(), leaf);
+            String leaf = packageHierarchy.get(0);
+            return new Node(leaf, parentPackage, true);
         } else {
-            PackageElement rootPackage = packageHierarchy.get(0);
-            Node root = new Node(rootPackage.getSimpleName().toString(), null);
-            Node child = createNodeForPackage(packageHierarchy.subList(1, packageHierarchy.size()));
-            root.children.put(child.packagePoint, child);
-            return root;
+            String currentTerminalName = packageHierarchy.get(0);
+            Node currentNode = new Node(currentTerminalName, parentPackage);
+            Node childNode = createNodeForPackage(packageHierarchy.subList(1, packageHierarchy.size()),
+                                                  currentNode.canonicalName);
+            currentNode.children.put(childNode.terminalName, childNode);
+            return currentNode;
         }
     }
 
     private static class Node {
 
-        /** The simple name of the package this Node represents. */
-        public final String packagePoint;
-        /** The corresponding PackageElement from the original set, or null if there is not matching package. */
-        public PackageElement packageElement;
+        /**
+         * The last element in the package hierarchy this Node represents. For example, if this node represents {@code
+         * com.workday.metajava} then the {@code terminalName} would be {@code metajava}.
+         */
+        public final String terminalName;
+        public final String canonicalName;
+        /**
+         * Node is marked as matchable if it represents a package originally added to the tree. For example, when adding
+         * the package {@code com.workday.metajava} then the nodes for {@code com} and {@code com.workday} would not be
+         * matchable but the node for {@code com.workday.metajava} would be matchable.
+         */
+        public boolean isMatchable = false;
         public Map<String, Node> children = new HashMap<>();
 
-        public Node(String packagePoint, PackageElement packageElement) {
-            this.packagePoint = packagePoint;
-            this.packageElement = packageElement;
+        public Node(String terminalName, String parentPackage) {
+            this(terminalName, parentPackage, false);
+        }
+
+        public Node(String terminalName, String parentPackage, boolean isMatchable) {
+            this.isMatchable = isMatchable;
+            this.terminalName = terminalName;
+            canonicalName = getCanonicalName(parentPackage);
+        }
+
+        private String getCanonicalName(String parentPackage) {
+            final String canonicalName;
+            if (parentPackage != null && terminalName != null) {
+                canonicalName = parentPackage + "." + terminalName;
+            } else if (terminalName != null) {
+                canonicalName = terminalName;
+            } else {
+                canonicalName = null;
+            }
+            return canonicalName;
         }
     }
 }
