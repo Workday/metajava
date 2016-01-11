@@ -36,20 +36,37 @@ public class PackageTree {
         }
     }
 
+    //@formatter:off
     /**
      * Find the most specific package from the set this instance was initialized with (see {@link #PackageTree(Elements,
      * Set)}), which the given element is under.
      * <p/>
      * Consider the set of packages {{@code "com.workday", "com.workday.model", "com.workday.model.xml.base"} }. The
-     * following table illustrates the behavior of this method. <table border="1" summary=""> <tr> <th>Element</th>
-     * <th>Return Value</th> </tr> <tr> <td>{@code com.workday.model.xml.GridModel}</td> <td>{@code
-     * com.workday.model}</td> </tr> <tr> <td>{@code com.workday.util.GridHelper}</td> <td>{@code com.workday}</td>
-     * </tr> <tr> <td>{@code org.chart.DataSet}</td> <td>{@code null}</td> </tr> </table>
+     * following table illustrates the behavior of this method.
+     * <table border="1" summary="">
+     *     <tr>
+     *         <th>Element</th>
+     *         <th>Return Value</th>
+     *     </tr>
+     *     <tr>
+     *         <td>{@code com.workday.model.xml.GridModel}</td>
+     *         <td>{@code com.workday.model}</td>
+     *     </tr>
+     *     <tr>
+     *         <td>{@code com.workday.util.GridHelper}</td>
+     *         <td>{@code com.workday}</td>
+     *     </tr>
+     *     <tr>
+     *         <td>{@code org.chart.DataSet}</td>
+     *         <td>{@code null}</td>
+     *     </tr>
+     * </table>
      *
      * @param element The element whose matching package we are trying to find.
      *
      * @return The most specific matching package for the element, or null if there is not matching package.
      */
+    //@formatter:on
     public PackageElement getMatchingPackage(Element element) {
         Node node = findDeepestMatchingNode(getPackageHierarchy(elementUtils.getPackageOf(element)));
         return node == null ? null : elementUtils.getPackageElement(node.canonicalName);

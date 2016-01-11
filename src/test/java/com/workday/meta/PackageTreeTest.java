@@ -18,8 +18,9 @@ import javax.lang.model.util.Elements;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.runners.MockitoJUnitRunner;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -30,29 +31,28 @@ import static org.mockito.Mockito.when;
  * @author nathan.taylor
  * @since 2015-02-27
  */
-@RunWith(JUnit4.class)
+@RunWith(MockitoJUnitRunner.class)
 public class PackageTreeTest {
 
+    @Mock
     private Name orgName;
+    @Mock
     private Name comName;
+    @Mock
     private PackageElement orgPackageElement;
+    @Mock
     private PackageElement comPackageElement;
+    @Mock
     private Element orgElement;
+    @Mock
     private Element comElement;
+    @Mock
     private Element packagelessElement;
+    @Mock
     private Elements elementUtils;
 
     @Before
     public void setUp() throws Exception {
-        orgName = Mockito.mock(Name.class);
-        comName = Mockito.mock(Name.class);
-        orgPackageElement = Mockito.mock(PackageElement.class);
-        comPackageElement = Mockito.mock(PackageElement.class);
-        orgElement = Mockito.mock(Element.class);
-        comElement = Mockito.mock(Element.class);
-        packagelessElement = Mockito.mock(Element.class);
-        elementUtils = Mockito.mock(Elements.class);
-
         when(orgName.toString()).thenReturn("org");
         when(comName.toString()).thenReturn("com");
         when(orgPackageElement.getQualifiedName()).thenReturn(orgName);
@@ -88,6 +88,7 @@ public class PackageTreeTest {
         // "org.Element"
         // "org.child1.Element"
         // "org.child1.grandchild.Element
+        // "org.child1.grandchild.greatgrandchild.Element
         // "org.child2.Element"
         // "com.Element"
         // "Element" (packageless)
