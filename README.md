@@ -14,6 +14,6 @@ dependencies {
 }
 ```
 
-## Build Status
+## Status
 
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.workday/metajava/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.workday/metajava) [![Build Status](https://travis-ci.org/Workday/metajava.svg?branch=master)](https://travis-ci.org/Workday/metajava)
