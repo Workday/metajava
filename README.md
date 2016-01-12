@@ -10,6 +10,11 @@ repositories {
 }
 
 dependencies {
-    compile 'com.workday:metajava:1.0'
+    compile "com.workday:metajava:$metajava_version"
 }
 ```
+
+## Build Status
+
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.workday/metajava/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.workday/metajava) [![Build Status](https://travis-ci.org/Workday/metajava.svg?branch=master)](https://travis-ci.org/Workday/metajava)
+
